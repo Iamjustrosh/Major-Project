@@ -1,7 +1,9 @@
+const path = require('path');
+
 module.exports = {
   packagerConfig: {
     asar: true,
-    icon: './assets/icon',
+    icon: path.resolve(__dirname, 'assets', 'icon'),
     executableName: 'CollabWhiteboard',
     appBundleId: 'com.roshan.collabwhiteboard',
     appCategoryType: 'public.app-category.productivity',
@@ -15,39 +17,10 @@ module.exports = {
   },
   rebuildConfig: {},
   makers: [
-    {
-      name: '@electron-forge/maker-squirrel',
-      config: {
-        name: 'CollabWhiteboard',
-        authors: 'Roshan Jain',
-        description: 'Real-time collaborative whiteboard application',
-        setupIcon: './assets/icon.ico',
-        setupExe: 'CollabWhiteboard-Setup.exe',
-        noMsi: true
-      }
-    },
+    // Use ZIP only - creates portable version
     {
       name: '@electron-forge/maker-zip',
-      platforms: ['darwin', 'linux', 'win32']
-    },
-    {
-      name: '@electron-forge/maker-deb',
-      config: {
-        options: {
-          maintainer: 'Roshan Jain <roshanjain.220407@gmail.com>',
-          homepage: 'https://collabboard-web.vercel.app/',
-          icon: './assets/icon.png'
-        }
-      }
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: {
-        options: {
-          homepage: 'https://collabboard-web.vercel.app/',
-          icon: './assets/icon.png'
-        }
-      }
+      platforms: ['win32']
     }
   ],
   plugins: [
@@ -57,11 +30,11 @@ module.exports = {
         build: [
           {
             entry: 'src/main.js',
-            config: 'vite.main.config.js'
+            config: 'vite.main.config.mjs'
           },
           {
             entry: 'src/preload.js',
-            config: 'vite.preload.config.js'
+            config: 'vite.preload.config.mjs'
           }
         ],
         renderer: [
@@ -70,19 +43,6 @@ module.exports = {
             config: 'vite.renderer.config.mjs'
           }
         ]
-      }
-    }
-  ],
-  publishers: [
-    {
-      name: '@electron-forge/publisher-github',
-      config: {
-        repository: {
-          owner: 'iamjustrosh',
-          name: 'collab-whiteboard'
-        },
-        prerelease: false,
-        draft: true
       }
     }
   ]
