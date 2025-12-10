@@ -1,66 +1,89 @@
-const { FusesPlugin } = require('@electron-forge/plugin-fuses');
-const { FuseV1Options, FuseVersion } = require('@electron/fuses');
-
 module.exports = {
   packagerConfig: {
     asar: true,
+    icon: './assets/icon',
+    executableName: 'CollabWhiteboard',
+    appBundleId: 'com.roshan.collabwhiteboard',
+    appCategoryType: 'public.app-category.productivity',
+    win32metadata: {
+      CompanyName: 'Roshan Jain',
+      FileDescription: 'Collaborative Whiteboard App',
+      OriginalFilename: 'CollabWhiteboard.exe',
+      ProductName: 'Collaborative Whiteboard',
+      InternalName: 'CollabWhiteboard'
+    }
   },
   rebuildConfig: {},
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
-      config: {},
+      config: {
+        name: 'CollabWhiteboard',
+        authors: 'Roshan Jain',
+        description: 'Real-time collaborative whiteboard application',
+        setupIcon: './assets/icon.ico',
+        setupExe: 'CollabWhiteboard-Setup.exe',
+        noMsi: true
+      }
     },
     {
       name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
+      platforms: ['darwin', 'linux', 'win32']
     },
     {
       name: '@electron-forge/maker-deb',
-      config: {},
+      config: {
+        options: {
+          maintainer: 'Roshan Jain <roshanjain.220407@gmail.com>',
+          homepage: 'https://collabboard-web.vercel.app/',
+          icon: './assets/icon.png'
+        }
+      }
     },
     {
       name: '@electron-forge/maker-rpm',
-      config: {},
-    },
+      config: {
+        options: {
+          homepage: 'https://collabboard-web.vercel.app/',
+          icon: './assets/icon.png'
+        }
+      }
+    }
   ],
   plugins: [
     {
       name: '@electron-forge/plugin-vite',
       config: {
-        // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
-        // If you are familiar with Vite configuration, it will look really familiar.
         build: [
           {
-            // `entry` is just an alias for `build.lib.entry` in the corresponding file of `config`.
             entry: 'src/main.js',
-            config: 'vite.main.config.mjs',
-            target: 'main',
+            config: 'vite.main.config.js'
           },
           {
             entry: 'src/preload.js',
-            config: 'vite.preload.config.mjs',
-            target: 'preload',
-          },
+            config: 'vite.preload.config.js'
+          }
         ],
         renderer: [
           {
             name: 'main_window',
-            config: 'vite.renderer.config.mjs',
-          },
-        ],
-      },
-    },
-    // Fuses are used to enable/disable various Electron functionality
-    // at package time, before code signing the application
-    new FusesPlugin({
-      version: FuseVersion.V1,
-      [FuseV1Options.RunAsNode]: false,
-      [FuseV1Options.EnableCookieEncryption]: true,
-      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
-      [FuseV1Options.EnableNodeCliInspectArguments]: false,
-      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-      [FuseV1Options.OnlyLoadAppFromAsar]: true,
-    }),
+            config: 'vite.renderer.config.mjs'
+          }
+        ]
+      }
+    }
   ],
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'iamjustrosh',
+          name: 'collab-whiteboard'
+        },
+        prerelease: false,
+        draft: true
+      }
+    }
+  ]
 };

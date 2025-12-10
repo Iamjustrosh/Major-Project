@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import Signup from "./pages/Signup";
 import ProjectPage from "./pages/ProjectPage";
 import Whiteboard from "./pages/Whiteboard";
+import JoinRoom from "./pages/JoinRoom";
 
 function Protected({ children }) {
   const user = useAuthStore((s) => s.user);
@@ -33,6 +34,7 @@ const App = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/projects" element={<ProjectPage />} />
         <Route path="/whiteboard/:projectId" element={<Whiteboard />} />
+        <Route path="/join/:shareCode" element={<JoinRoom />} />
       </Routes>
     </Router>
   );
