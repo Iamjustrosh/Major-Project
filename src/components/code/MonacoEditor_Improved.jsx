@@ -8,21 +8,27 @@ const LANGUAGES = [
   { label: "Java", value: "java" },
 ];
 
-export default function MonacoEditor_Improved({ language, setLanguage, code, setCode }) {
+export default function MonacoEditor({ 
+  language, 
+  setLanguage, 
+  code, 
+  setCode,
+  onFocus,
+  onBlur 
+}) {
   return (
     <div 
       className="flex flex-col flex-1 p-2"
-      // ✅ FIX: Prevent keyboard events from bubbling to tldraw
+      // ✅ Prevent keyboard events from bubbling to tldraw
       onKeyDown={(e) => e.stopPropagation()}
       onKeyUp={(e) => e.stopPropagation()}
       onKeyPress={(e) => e.stopPropagation()}
     >
       <div className="flex gap-2 mb-2">
         <select
-          className="bg-gray-800 p-1 rounded text-white"
+          className="bg-gray-800 p-1 rounded text-white text-sm"
           value={language}
           onChange={(e) => setLanguage(e.target.value)}
-          // Stop events on the dropdown too
           onKeyDown={(e) => e.stopPropagation()}
         >
           {LANGUAGES.map((l) => (
@@ -32,7 +38,7 @@ export default function MonacoEditor_Improved({ language, setLanguage, code, set
       </div>
 
       <Editor
-        height="250px"
+        height="100%"
         language={language === "cpp" ? "cpp" : language === "python3" ? "python" : language}
         value={code}
         onChange={(value) => setCode(value)}
@@ -40,12 +46,17 @@ export default function MonacoEditor_Improved({ language, setLanguage, code, set
         options={{ 
           fontSize: 14, 
           minimap: { enabled: false },
-          // Ensure editor captures all keyboard events
           automaticLayout: true,
+          scrollBeyondLastLine: false,
+          wordWrap: "on",
         }}
-        // ✅ FIX: When editor mounts, focus it to capture keyboard
         onMount={(editor) => {
           editor.focus();
+          if (onFocus) onFocus();
+        }}
+        // Track focus for whiteboard
+        beforeMount={() => {
+          if (onFocus) onFocus();
         }}
       />
     </div>

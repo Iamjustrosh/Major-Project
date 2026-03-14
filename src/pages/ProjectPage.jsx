@@ -98,6 +98,7 @@ const ProjectPage = () => {
         }
     };
 
+
     // Rename
     const openRenameModal = (id, currentName) => {
         setRenameModal({ open: true, projectId: id, currentName });
@@ -154,7 +155,7 @@ const ProjectPage = () => {
             alert("Invalid share code!");
             return;
         }
-        navigate(`/whiteboard/${project.id}`);
+        navigate(`/Whiteboard_TldrawSync/${project.id}`);
         setJoinModalOpen(false);
         setJoinCode("");
     };
@@ -162,7 +163,11 @@ const ProjectPage = () => {
     // Profile edit
     const displayName = user?.user_metadata?.display_name || "";
     const shouldPromptName = !displayName || displayName.trim().toLowerCase() === "user";
-    const openProfileModal = () => setProfileModal(true);
+    // --- fix openProfileModal ---
+    const openProfileModal = () => {
+        setProfileNameInput(displayName);
+        setProfileModal(true);
+    };
     const handleProfileSave = async () => {
         if (!profileNameInput.trim()) return;
         setProfileLoading(true);
@@ -263,7 +268,7 @@ const ProjectPage = () => {
                             return (
                                 <div
                                     key={proj.id}
-                                    onClick={() => navigate(`/whiteboard/${proj.id}`)}
+                                    onClick={() => navigate(`/Whiteboard_TldrawSync/${proj.id}`)}
                                     className="relative bg-white/10 border border-white/20 backdrop-blur-xl rounded-2xl p-5 flex flex-col justify-between hover:bg-white/20 transition-all"
                                     style={{ zIndex: openProjectMenu === proj.id ? Z_INDEX_TOP + 110 : "auto" }}
                                 >
@@ -396,7 +401,27 @@ const ProjectPage = () => {
                 </div>
             </Modal>
 
-            {/* Profile edit modal is assumed to remain as before (not required as per prompt, but can be added similarly) */}
+            {/* Profile Edit Modal */}
+            <Modal open={profileModal} onClose={() => setProfileModal(false)} zIndexOverride={Z_INDEX_TOP + 60}>
+                <h3 className="text-lg mb-4 font-semibold">Edit Display Name</h3>
+                <input
+                    type="text"
+                    placeholder="Enter your display name"
+                    value={profileNameInput}
+                    onChange={e => setProfileNameInput(e.target.value)}
+                    className="w-full p-3 rounded-xl bg-black/30 border border-white/20 text-white placeholder-gray-400 mb-4"
+                />
+                <div className="flex gap-3 justify-end">
+                    <button onClick={() => setProfileModal(false)} className="bg-gray-700 px-4 py-2 rounded-lg">Cancel</button>
+                    <button
+                        onClick={handleProfileSave}
+                        disabled={!profileNameInput.trim() || profileLoading}
+                        className="bg-blue-600 px-4 py-2 rounded-lg disabled:opacity-70"
+                    >
+                        {profileLoading ? "Saving..." : "Save"}
+                    </button>
+                </div>
+            </Modal>
         </div>
     );
 };

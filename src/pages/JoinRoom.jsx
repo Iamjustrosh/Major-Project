@@ -19,7 +19,7 @@ export default function JoinRoom() {
         alert("Invalid or expired share link!");
         navigate("/projects");
       } else {
-        navigate(`/whiteboard/${project.id}`);
+        navigate(`/Whiteboard_TldrawSync/${project.id}`);
       }
 
       setLoading(false);

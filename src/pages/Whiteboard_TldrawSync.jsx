@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../services/supabaseClient";
-import { Tldraw, createTLStore, defaultShapeUtils, loadSnapshot, getSnapshot } from "tldraw";
+import { Tldraw } from "tldraw";
+import { useSyncDemo } from "@tldraw/sync";
 import { useAuthStore } from "../store/useAuthStore";
 import { FiShare2, FiCode, FiWifi, FiCopy, FiCheck } from "react-icons/fi";
 import CodeWorkspace_Improved from "../components/code/CodeWorkspace_Improved";
@@ -109,7 +110,7 @@ function ShareModal({ isOpen, onClose, shareCode }) {
           className="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-md mx-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <h2 className="text-2xl font-bold text-white mb-4">Share Whiteboard_TldrawSync</h2>
+          <h2 className="text-2xl font-bold text-white mb-4">Share Whiteboard</h2>
           
           <p className="text-gray-400 text-sm mb-4">
             Share this code with others to invite them to collaborate:
@@ -157,7 +158,7 @@ function ShareModal({ isOpen, onClose, shareCode }) {
   );
 }
 
-export default function Whiteboard_TldrawSync() {
+export default function Whiteboard() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
@@ -170,101 +171,34 @@ export default function Whiteboard_TldrawSync() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [editorHasFocus, setEditorHasFocus] = useState(false);
 
-  const storeRef = useRef(null);
-  const channelRef = useRef(null);
-  const isReceivingRef = useRef(false);
-  const saveTimeoutRef = useRef(null);
-
   const userInfo = {
     id: user?.id,
     name: user?.user_metadata?.display_name || "Anonymous",
     color: `hsl(${((user?.id || "").charCodeAt(0) || 0) * 137.5 % 360}, 70%, 50%)`,
   };
 
-  // Create tldraw store
-  if (!storeRef.current) {
-    storeRef.current = createTLStore({ shapeUtils: defaultShapeUtils });
-  }
-
-  // Load snapshot from Supabase on mount
-  useEffect(() => {
-    if (!projectId || !storeRef.current) return;
-
-    const loadSnapshot = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("projects")
-          .select("canvas_data")
-          .eq("id", projectId)
-          .single();
-
-        if (!error && data?.canvas_data) {
-          console.log("📂 Loading saved canvas data");
-          const store = storeRef.current;
-          
-          // Load the snapshot into the store
-          store.loadSnapshot({
-            store: data.canvas_data.store,
-            schema: data.canvas_data.schema
-          });
-        }
-      } catch (err) {
-        console.error("❌ Error loading canvas:", err);
-      }
-    };
-
-    loadSnapshot();
-  }, [projectId]);
-
-  // Save to Supabase with debouncing
-  const saveToSupabase = useCallback(async () => {
-    if (!storeRef.current || !projectId) return;
-
-    try {
-      const snapshot = getSnapshot(storeRef.current);
-      
-      const { error } = await supabase
-        .from("projects")
-        .update({ 
-          canvas_data: snapshot,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", projectId);
-
-      if (error) {
-        console.error("❌ Error saving canvas:", error);
-      } else {
-        console.log("💾 Canvas saved to database");
-      }
-    } catch (err) {
-      console.error("❌ Error saving:", err);
+  // ✨ Use tldraw's official sync for collaboration
+  // This handles ALL real-time features: live cursors, presence, sync, etc.
+  const store = useSyncDemo({ 
+    roomId: projectId,
+    userInfo: {
+      id: user?.id || 'anonymous',
+      name: userInfo.name,
+      color: userInfo.color,
     }
-  }, [projectId]);
+  });
 
-  // Debounced save function
-  const debouncedSave = useCallback(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    saveTimeoutRef.current = setTimeout(() => {
-      saveToSupabase();
-    }, 2000); // Save 2 seconds after last change
-  }, [saveToSupabase]);
-
-  // Setup realtime sync
+  // Track presence using Supabase (for our custom presence panel)
   useEffect(() => {
     if (!projectId) return;
 
-    console.log("🟢 Connecting to room:", projectId);
+    console.log("🟢 Connecting to presence:", projectId);
 
-    const channel = supabase.channel(`collab:${projectId}`, {
+    const channel = supabase.channel(`presence:${projectId}`, {
       config: {
-        broadcast: { self: false },
         presence: { key: user?.id },
       },
     });
-
-    channelRef.current = channel;
 
     channel
       .on("presence", { event: "sync" }, () => {
@@ -283,148 +217,21 @@ export default function Whiteboard_TldrawSync() {
         setConnectedUsers(uniqueUsers);
         console.log("👥 Online:", uniqueUsers.map(u => u.name).join(", "));
       })
-      .on("broadcast", { event: "draw" }, ({ payload }) => {
-        console.log("📥 Received drawing from:", payload.user);
-        
-        isReceivingRef.current = true;
-        
-        try {
-          const store = storeRef.current;
-          const { type, data } = payload;
-
-          store.mergeRemoteChanges(() => {
-            if (type === "put") {
-              store.put(data);
-            } else if (type === "remove") {
-              store.remove(data);
-            } else if (type === "snapshot") {
-              // Load full snapshot from new user
-              store.loadSnapshot(data);
-            }
-          });
-        } catch (err) {
-          console.error("❌ Error applying changes:", err);
-        } finally {
-          isReceivingRef.current = false;
-        }
-      })
-      .on("broadcast", { event: "request-state" }, ({ payload }) => {
-        if (payload.userId === user?.id) return;
-        if (!isConnected) return; // Don't send if not connected
-        
-        console.log("📤 Sending full state to:", payload.user);
-        
-        const snapshot = getSnapshot(storeRef.current);
-
-        // Send snapshot without awaiting (prevents REST fallback warning)
-        channel.send({
-          type: "broadcast",
-          event: "draw",
-          payload: {
-            type: "snapshot",
-            data: snapshot,
-            user: userInfo.name,
-            userId: user?.id,
-          },
-        });
-      })
       .subscribe(async (status) => {
-        console.log("🔌 Status:", status);
+        console.log("🔌 Presence Status:", status);
         setIsConnected(status === "SUBSCRIBED");
         
         if (status === "SUBSCRIBED") {
           await channel.track(userInfo);
-          
-          // Request state from other users
-          channel.send({
-            type: "broadcast",
-            event: "request-state",
-            payload: {
-              user: userInfo.name,
-              userId: user?.id,
-            },
-          });
         }
       });
 
     return () => {
-      console.log("🔴 Disconnecting");
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      saveToSupabase(); // Save before leaving
+      console.log("🔴 Disconnecting presence");
       channel.untrack();
       channel.unsubscribe();
     };
-  }, [projectId, user?.id, userInfo.name, userInfo.color, saveToSupabase]);
-
-  // Listen to local changes for broadcasting
-  useEffect(() => {
-    if (!storeRef.current || !channelRef.current || !isConnected) return;
-
-    const store = storeRef.current;
-    const channel = channelRef.current;
-
-    const handleChange = (change) => {
-      if (isReceivingRef.current) return;
-      if (!isConnected) return; // Don't broadcast if not connected
-      if (!channel) return; // Safety check
-
-      const { changes } = change;
-      const { added, updated, removed } = changes;
-
-      const putRecords = [
-        ...Object.values(added),
-        ...Object.values(updated).map(([_, to]) => to),
-      ];
-
-      if (putRecords.length > 0) {
-        console.log("📤 Broadcasting", putRecords.length, "shapes");
-        
-        // Don't await to prevent REST fallback
-        channel.send({
-          type: "broadcast",
-          event: "draw",
-          payload: {
-            type: "put",
-            data: putRecords,
-            user: userInfo.name,
-            userId: user?.id,
-          },
-        });
-
-        // Trigger debounced save
-        debouncedSave();
-      }
-
-      if (Object.keys(removed).length > 0) {
-        const removeIds = Object.keys(removed);
-        
-        console.log("📤 Broadcasting delete", removeIds.length, "shapes");
-        
-        channel.send({
-          type: "broadcast",
-          event: "draw",
-          payload: {
-            type: "remove",
-            data: removeIds,
-            user: userInfo.name,
-            userId: user?.id,
-          },
-        });
-
-        // Trigger debounced save
-        debouncedSave();
-      }
-    };
-
-    const unsubscribe = store.listen(handleChange, {
-      source: "user",
-      scope: "document",
-    });
-
-    return unsubscribe;
-  }, [user?.id, userInfo.name, debouncedSave, isConnected]);
+  }, [projectId, user?.id, userInfo.name, userInfo.color]);
 
   // Fetch project metadata
   useEffect(() => {
@@ -462,7 +269,7 @@ export default function Whiteboard_TldrawSync() {
       <div className="h-screen flex items-center justify-center bg-black text-white">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-lg">Loading Whiteboard_TldrawSync...</p>
+          <p className="text-lg">Loading whiteboard...</p>
         </div>
       </div>
     );
@@ -519,8 +326,14 @@ export default function Whiteboard_TldrawSync() {
       {/* Canvas */}
       <div className="flex flex-1 overflow-hidden">
         <div className={`h-full transition-all duration-300 ${showEditor ? "w-1/2" : "flex-1"}`}>
+          {/* 
+            ✨ tldraw with official sync:
+            - store: Handles real-time collaboration automatically
+            - persistenceKey: Saves to localStorage for offline persistence
+            - autoFocus: Focus management
+          */}
           <Tldraw 
-            // store={storeRef.current}
+            store={store}
             persistenceKey={`project-${projectId}`}
             autoFocus={!editorHasFocus}
           />
