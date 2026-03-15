@@ -1,28 +1,30 @@
-// Preload script (CommonJS version)
 const { contextBridge, ipcRenderer } = require('electron');
 
-// ✅ Your existing code (KEEP THIS)
+// ✅ Platform info
 contextBridge.exposeInMainWorld('electron', {
   platform: process.platform,
   versions: {
-    node: process.versions.node,
-    chrome: process.versions.chrome,
+    node:     process.versions.node,
+    chrome:   process.versions.chrome,
     electron: process.versions.electron,
   },
 });
 
-// ✅ NEW: Code execution API (ADD THIS)
+// ✅ App APIs — all in one clean object
 contextBridge.exposeInMainWorld('electronAPI', {
-  /**
-   * Execute code using Electron's main process (bypasses CORS!)
-   */
-  executeCode: (code, language, stdin) => {
-    return ipcRenderer.invoke('execute-code', { code, language, stdin });
-  },
+  // Judge0 code execution
+  executeCode: (code, language, stdin) =>
+    ipcRenderer.invoke('execute-code', { code, language, stdin }),
 
-  /**
-   * Check if running in Electron
-   */
+  // ✅ Clipboard — fallback for when navigator.clipboard is blocked
+  clipboardWrite: (text) =>
+    ipcRenderer.invoke('clipboard-write', text),
+
+  // ✅ Screen share sources
+  getScreenSources: () =>
+    ipcRenderer.invoke('get-screen-sources'),
+
+  // Electron check
   isElectron: () => true,
 });
 

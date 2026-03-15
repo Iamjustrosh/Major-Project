@@ -93,7 +93,11 @@ function ShareModal({ isOpen, onClose, shareCode }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(shareCode);
+    if (window.electronAPI?.clipboardWrite) {
+      await window.electronAPI.clipboardWrite(shareCode);
+    } else {
+      await navigator.clipboard.writeText(shareCode); // fallback for browser
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -103,7 +107,7 @@ function ShareModal({ isOpen, onClose, shareCode }) {
   return (
     <>
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-1000 flex items-center justify-center"
         onClick={onClose}
       >
         <div 

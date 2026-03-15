@@ -5,11 +5,29 @@ export const useAuthStore = create((set) => ({
   user: null,
   session: null,
   loading: true,
+  isGuest: false,
 
   setUser: (u) => set({ user: u }),
   setSession: (s) => set({ session: s }),
   setLoading: (v) => set({ loading: v }),
 
+
+    // ✅ Enter guest mode — no Supabase, just local state
+    enterGuestMode: () => {
+      set({
+        user: null,
+        session: null,
+        isGuest: true,
+        loading: false,
+      });
+    },
+   
+    // ✅ Exit guest mode (when guest signs up / logs in)
+    exitGuestMode: () => {
+      set({ isGuest: false });
+    },
+
+    
   init: async () => {
     try {
       // ✅ Restore session from localStorage on app launch
