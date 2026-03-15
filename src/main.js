@@ -1,4 +1,3 @@
-require('dotenv').config();
 const { app, BrowserWindow, ipcMain, session, clipboard, desktopCapturer } = require('electron');
 const path = require('path');
 const https = require('https');
