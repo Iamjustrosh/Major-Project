@@ -1,7 +1,7 @@
 {
   "name": "collabboard-project",
   "productName": "Collaborative Whiteboard V2",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Real-time collaborative Whiteboard V2 application",
   "main": ".vite/build/main.js",
   "scripts": {

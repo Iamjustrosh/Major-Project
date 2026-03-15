@@ -4,15 +4,15 @@ module.exports = {
   packagerConfig: {
     asar: true,
     icon: path.resolve(__dirname, 'assets', 'icon'),
-    executableName: 'CollabWhiteboard_TldrawSync',
-    appBundleId: 'com.roshan.collabWhiteboard_TldrawSync',
+    executableName: 'CollabWhiteboard V2',
+    appBundleId: 'com.roshan.collabWhiteboard V2',
     appCategoryType: 'public.app-category.productivity',
     win32metadata: {
       CompanyName: 'Roshan Jain',
-      FileDescription: 'Collaborative Whiteboard_TldrawSync App',
-      OriginalFilename: 'CollabWhiteboard_TldrawSync.exe',
-      ProductName: 'Collaborative Whiteboard_TldrawSync',
-      InternalName: 'CollabWhiteboard_TldrawSync'
+      FileDescription: 'Collaborative Whiteboard V2 App',
+      OriginalFilename: 'CollabWhiteboard V2.exe',
+      ProductName: 'Collaborative Whiteboard V2',
+      InternalName: 'CollabWhiteboard V2'
     }
   },
   rebuildConfig: {},
