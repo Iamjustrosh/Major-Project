@@ -183,13 +183,8 @@ export default function Whiteboard() {
 
   // ✨ Use tldraw's official sync for collaboration
   // This handles ALL real-time features: live cursors, presence, sync, etc.
-  const store = useSyncDemo({ 
-    roomId: projectId,
-    userInfo: {
-      id: user?.id || 'anonymous',
-      name: userInfo.name,
-      color: userInfo.color,
-    }
+  const syncStore = useSyncDemo({
+    roomId: `collabboard-${projectId}`,
   });
 
   // Track presence using Supabase (for our custom presence panel)
@@ -268,13 +263,32 @@ export default function Whiteboard() {
     fetchProject();
   }, [projectId, navigate]);
 
-  if (loading) {
+  if (loading || syncStore.status === 'loading') {
     return (
       <div className="h-screen flex items-center justify-center bg-black text-white">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-lg">Loading whiteboard...</p>
+          <p className="text-lg">
+            {syncStore.status === 'loading'
+              ? 'Connecting to collaboration server...'
+              : 'Loading whiteboard...'}
+          </p>
         </div>
+      </div>
+    );
+  }
+
+  if (syncStore.status === 'error') {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-black text-white gap-4 px-6">
+        <p className="text-red-400 text-lg font-medium">Could not connect to the whiteboard</p>
+        <p className="text-gray-400 text-sm text-center max-w-md">{syncStore.error?.message}</p>
+        <button
+          onClick={() => navigate('/projects')}
+          className="px-4 py-2 bg-white/10 rounded-xl hover:bg-white/20 transition"
+        >
+          Back to projects
+        </button>
       </div>
     );
   }
@@ -336,8 +350,8 @@ export default function Whiteboard() {
             - persistenceKey: Saves to localStorage for offline persistence
             - autoFocus: Focus management
           */}
-          <Tldraw 
-            store={store}
+          <Tldraw
+            store={syncStore.store}
             persistenceKey={`project-${projectId}`}
             autoFocus={!editorHasFocus}
           />

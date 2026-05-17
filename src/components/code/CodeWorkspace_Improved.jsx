@@ -35,66 +35,6 @@ for(let i = 0; i < 5; i++) {
 }`
 };
 
-// Input Dialog Component
-function InputDialog({ isOpen, onClose, onSubmit }) {
-  const [input, setInput] = useState("");
-
-  if (!isOpen) return null;
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(input);
-    setInput("");
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-1000 flex items-center justify-center">
-      <div className="bg-gray-900 border border-white/20 rounded-2xl p-6 w-full max-w-md mx-4">
-        <h2 className="text-xl font-bold text-white mb-2">Program Input</h2>
-        <p className="text-gray-400 text-sm mb-4">
-          Your code requires input. Provide all inputs here (one per line):
-        </p>
-
-        <form onSubmit={handleSubmit}>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="w-full h-32 bg-gray-950 border border-white/20 rounded-lg p-3 text-white font-mono text-sm resize-none focus:outline-none focus:border-blue-500"
-            placeholder="Enter input here (one per line)&#10;Example:&#10;Alice&#10;25&#10;New York"
-            autoFocus
-          />
-
-          <div className="flex items-center gap-3 mt-4 text-xs text-gray-500">
-            <FiTerminal className="shrink-0" />
-            <span>Each line will be sent as one input to your program</span>
-          </div>
-
-          <div className="flex gap-3 mt-4">
-            <button
-              type="button"
-              onClick={() => {
-                onSubmit("");
-                setInput("");
-                onClose();
-              }}
-              className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-white"
-            >
-              Run Without Input
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition text-white font-medium"
-            >
-              Run With Input
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 export default function CodeWorkspace({ onFocus, onBlur }) {
   const { projectId } = useParams();
   
@@ -110,7 +50,8 @@ export default function CodeWorkspace({ onFocus, onBlur }) {
 
   const [output, setOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
-  const [showInputDialog, setShowInputDialog] = useState(false);
+  const [awaitingInput, setAwaitingInput] = useState(false);
+  const [stdinBuffer, setStdinBuffer] = useState("");
 
   useEffect(() => {
     if (projectId && code) {
@@ -210,20 +151,45 @@ export default function CodeWorkspace({ onFocus, onBlur }) {
   };
 
   const handleRun = () => {
-    if (codeNeedsInput()) {
-      setShowInputDialog(true);
-    } else {
-      executeCode("");
+    if (isRunning) return;
+
+    if (awaitingInput) {
+      const stdin = stdinBuffer;
+      setAwaitingInput(false);
+      setStdinBuffer("");
+      executeCode(stdin);
+      return;
     }
+
+    if (codeNeedsInput()) {
+      setAwaitingInput(true);
+      setStdinBuffer("");
+      setOutput(
+        "Program requires input.\n" +
+        "Type each value in the terminal below (one line per input()), then click Run again."
+      );
+      return;
+    }
+
+    executeCode("");
   };
 
-  const handleInputSubmit = (input) => {
-    executeCode(input);
+  const handleTerminalInput = (line) => {
+    if (!awaitingInput) return;
+    setStdinBuffer((prev) => (prev ? `${prev}\n${line}` : line));
   };
 
   const handleStop = () => {
-    setIsRunning(false);
-    setOutput(prev => prev + "\n\n⚠️ Execution stopped by user.");
+    if (isRunning) {
+      setIsRunning(false);
+      setOutput((prev) => prev + "\n\n⚠️ Execution stopped by user.");
+      return;
+    }
+    if (awaitingInput) {
+      setAwaitingInput(false);
+      setStdinBuffer("");
+      setOutput((prev) => prev + "\n\n⚠️ Input collection cancelled.");
+    }
   };
 
   const handleClearTerminal = () => {
@@ -246,20 +212,14 @@ export default function CodeWorkspace({ onFocus, onBlur }) {
 
   return (
     <div className="flex flex-col h-full bg-gray-950">
-      <InputDialog
-        isOpen={showInputDialog}
-        onClose={() => setShowInputDialog(false)}
-        onSubmit={handleInputSubmit}
-      />
-
       {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-white/10">
         <div className="flex items-center gap-2">
           <button
-            onClick={isRunning ? handleStop : handleRun}
+            onClick={isRunning || awaitingInput ? handleStop : handleRun}
             className={`flex items-center gap-2 px-3 py-1.5 rounded transition ${
-              isRunning 
-                ? 'bg-red-600 hover:bg-red-500' 
+              isRunning || awaitingInput
+                ? 'bg-red-600 hover:bg-red-500'
                 : 'bg-green-600 hover:bg-green-500'
             }`}
             disabled={isRunning}
@@ -268,6 +228,11 @@ export default function CodeWorkspace({ onFocus, onBlur }) {
               <>
                 <FiSquare className="text-white" size={14} />
                 <span className="text-white text-sm">Running...</span>
+              </>
+            ) : awaitingInput ? (
+              <>
+                <FiPlay className="text-white" size={14} />
+                <span className="text-white text-sm">Run with input</span>
               </>
             ) : (
               <>
@@ -320,9 +285,9 @@ export default function CodeWorkspace({ onFocus, onBlur }) {
           <Terminal
             output={output}
             isRunning={isRunning}
-            onInput={() => {}}
+            awaitingInput={awaitingInput}
+            onInput={handleTerminalInput}
             onClear={handleClearTerminal}
-            language={language}
           />
         </div>
       </div>

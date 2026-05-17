@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { supabase } from "../services/supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { SiGmail } from "react-icons/si";
+import { useAuthStore } from "../store/useAuthStore";
 
 function LoginPage() {
   const navigate = useNavigate();
+  const exitGuestMode = useAuthStore((s) => s.exitGuestMode);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +28,7 @@ function LoginPage() {
       setMessage(error.message);
       setIsLoading(false);
     } else {
-      // ✅ onAuthStateChange fires → sets user in store → AuthRoute redirects to /projects
+      exitGuestMode();
       navigate("/projects");
     }
   };

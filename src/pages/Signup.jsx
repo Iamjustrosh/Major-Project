@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { supabase } from "../services/supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { SiGmail } from "react-icons/si";
+import { useAuthStore } from "../store/useAuthStore";
 
 function Signup() {
   const navigate = useNavigate();
+  const exitGuestMode = useAuthStore((s) => s.exitGuestMode);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -39,6 +41,7 @@ function Signup() {
     if (error) {
       setMessage(error.message);
     } else {
+      exitGuestMode();
       setMessage("Signup successful! Please check your email for verification.");
     }
   };
